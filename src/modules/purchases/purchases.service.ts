@@ -11,12 +11,15 @@ import { CreatePurchaseDto } from './dto/purchase.dto';
 @Injectable()
 export class PurchasesService {
   private readonly logger = new Logger(PurchasesService.name);
-  private mpClient: MercadoPagoConfig;
 
-  constructor(private prisma: PrismaService) {
-    this.mpClient = new MercadoPagoConfig({
-      accessToken: process.env.MP_ACCESS_TOKEN || '',
-    });
+  constructor(private prisma: PrismaService) {}
+
+  private getMpClient(): MercadoPagoConfig {
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) {
+      throw new BadRequestException('MP_ACCESS_TOKEN não configurado no servidor');
+    }
+    return new MercadoPagoConfig({ accessToken });
   }
 
   async create(userId: string, dto: CreatePurchaseDto) {
@@ -59,7 +62,7 @@ export class PurchasesService {
 
     // Criar pagamento PIX no Mercado Pago
     try {
-      const paymentClient = new Payment(this.mpClient);
+      const paymentClient = new Payment(this.getMpClient());
       const mpPayment = await paymentClient.create({
         body: {
           transaction_amount: amount,

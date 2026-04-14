@@ -5,4 +5,4 @@ cmds = ["npm install"]
 cmds = ["npm run build", "npx prisma generate"]
 
 [start]
-cmd = "npx prisma migrate deploy && npm run start:prod"
+cmd = "npm run start:prod"

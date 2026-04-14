@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -18,15 +19,24 @@ export class WeddingsService {
 
   async create(userId: string, dto: CreateWeddingDto) {
     const slug = await this.generateSlug(dto.groomName, dto.brideName);
-    return this.prisma.wedding.create({
-      data: {
-        userId,
-        groomName: dto.groomName,
-        brideName: dto.brideName,
-        city: dto.city ?? 'SAO PAULO',
-        slug,
-      },
-    });
+    try {
+      return await this.prisma.wedding.create({
+        data: {
+          userId,
+          groomName: dto.groomName,
+          brideName: dto.brideName,
+          city: dto.city ?? 'SAO PAULO',
+          slug,
+        },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2003') {
+        throw new UnauthorizedException(
+          'Sessão inválida. Por favor, faça logout e registre-se novamente.',
+        );
+      }
+      throw err;
+    }
   }
 
   async findMine(userId: string) {

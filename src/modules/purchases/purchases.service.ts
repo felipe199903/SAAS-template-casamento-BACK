@@ -23,9 +23,10 @@ export class PurchasesService {
   }
 
   async create(userId: string, dto: CreatePurchaseDto) {
-    const wedding = await this.prisma.wedding.findUnique({
-      where: { id: dto.weddingId },
-    });
+    const [wedding, user] = await Promise.all([
+      this.prisma.wedding.findUnique({ where: { id: dto.weddingId } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+    ]);
     if (!wedding) throw new NotFoundException('Casamento não encontrado');
     if (wedding.userId !== userId) {
       throw new BadRequestException('Casamento não pertence ao usuário');
@@ -69,7 +70,7 @@ export class PurchasesService {
           description: `CasalPerfeito - ${wedding.groomName} & ${wedding.brideName}`,
           payment_method_id: 'pix',
           payer: {
-            email: `user-${userId}@casalperfeito.com`,
+            email: user?.email || `user-${userId}@casalperfeito.com`,
           },
           external_reference: purchase.id,
           notification_url: `${process.env.BACKEND_URL || 'https://saas-template-casamento-back-production.up.railway.app/api'}/payments/webhook/mercadopago`,

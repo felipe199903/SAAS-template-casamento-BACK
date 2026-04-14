@@ -38,7 +38,12 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
+  const dbUrl = process.env.DATABASE_URL || 'NOT SET';
+  const maskedDb = dbUrl.replace(/:([^:@]+)@/, ':****@');
   console.log(`🚀 CasalPerfeito API rodando em http://localhost:${port}/api`);
+  console.log(`🗄️  Database: ${maskedDb}`);
+  console.log(`🌍 NODE_ENV: ${process.env.NODE_ENV || 'NOT SET'}`);
+  console.log(`🔐 JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`);
 }
 bootstrap();
 

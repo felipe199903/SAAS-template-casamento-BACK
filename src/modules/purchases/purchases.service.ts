@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import MercadoPagoConfig, { Payment } from 'mercadopago';
@@ -9,6 +10,7 @@ import { CreatePurchaseDto } from './dto/purchase.dto';
 
 @Injectable()
 export class PurchasesService {
+  private readonly logger = new Logger(PurchasesService.name);
   private mpClient: MercadoPagoConfig;
 
   constructor(private prisma: PrismaService) {
@@ -67,7 +69,7 @@ export class PurchasesService {
             email: `user-${userId}@casalperfeito.com`,
           },
           external_reference: purchase.id,
-          notification_url: `${process.env.BACKEND_URL || 'http://localhost:3000'}/payments/webhook/mercadopago`,
+          notification_url: `${process.env.BACKEND_URL || 'https://saas-template-casamento-back-production.up.railway.app/api'}/payments/webhook/mercadopago`,
         },
       });
 
@@ -83,9 +85,13 @@ export class PurchasesService {
       });
 
       return updated;
-    } catch (err) {
-      // Em dev sem credenciais MP reais, retorna purchase sem QR
-      return purchase;
+    } catch (err: any) {
+      // Logar erro para diagnóstico mas não expor detalhes internos
+      const mpError = err?.cause?.[0]?.description || err?.message || 'unknown';
+      this.logger.error(`Mercado Pago error for purchase ${purchase.id}: ${mpError}`);
+      throw new BadRequestException(
+        `Erro ao gerar pagamento PIX: ${mpError}. Verifique as credenciais do Mercado Pago.`,
+      );
     }
   }
 

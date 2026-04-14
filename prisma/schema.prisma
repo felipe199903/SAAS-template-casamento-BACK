@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  role         Role       @default(USER)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  weddings     Wedding[]
+  purchases    Purchase[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// WEDDINGS
+// ─────────────────────────────────────────────
+model Wedding {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  groomName  String   @map("groom_name")
+  brideName  String   @map("bride_name")
+  slug       String   @unique
+  city       String   @default("SAO PAULO")
+  pixKey     String?  @map("pix_key")
+  pixKeyType String?  @map("pix_key_type") // cpf | email | phone | random
+  paid       Boolean  @default(false)
+  published  Boolean  @default(false)
+  customData Json?    @map("custom_data")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id])
+  presents  Present[]
+  purchases Purchase[]
+
+  @@map("weddings")
+}
+
+// ─────────────────────────────────────────────
+// PRESENTS
+// ─────────────────────────────────────────────
+enum PresentStatus {
+  available
+  reserved
+  paid
+}
+
+model Present {
+  id            String        @id @default(uuid())
+  weddingId     String        @map("wedding_id")
+  name          String
+  price         Decimal       @db.Decimal(10, 2)
+  imageUrl      String        @map("image_url")
+  status        PresentStatus @default(available)
+  description   String?
+  isCustomValue Boolean       @default(false) @map("is_custom_value")
+  minValue      Decimal?      @map("min_value") @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  wedding Wedding @relation(fields: [weddingId], references: [id])
+
+  @@map("presents")
+}
+
+// ─────────────────────────────────────────────
+// PURCHASES (ativação do site pelo casal)
+// ─────────────────────────────────────────────
+enum PurchaseStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model Purchase {
+  id                String         @id @default(uuid())
+  userId            String         @map("user_id")
+  weddingId         String         @map("wedding_id")
+  status            PurchaseStatus @default(PENDING)
+  amount            Decimal        @db.Decimal(10, 2)
+  paymentProvider   String         @default("mercadopago") @map("payment_provider")
+  externalPaymentId String?        @map("external_payment_id")
+  checkoutUrl       String?        @map("checkout_url")
+  pixQrCode         String?        @map("pix_qr_code")
+  pixCopyPaste      String?        @map("pix_copy_paste")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  wedding  Wedding   @relation(fields: [weddingId], references: [id])
+  payments Payment[]
+
+  @@map("purchases")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENTS (auditoria de webhooks)
+// ─────────────────────────────────────────────
+model Payment {
+  id         String   @id @default(uuid())
+  purchaseId String   @map("purchase_id")
+  status     String
+  payload    Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id])
+
+  @@map("payments")
+}
+
